@@ -1,0 +1,15 @@
+{
+  "imdbUrls": {
+    "urls": [
+      "https://www.imdb.com/search/title/?title_type=feature,tv_movie&start=:start&count=250",
+      "https://www.imdb.com/search/title/?title_type=tv_series&start=:start&count=250"
+    ],
+    "baseUrl": "https://www.imdb.com",
+    "dynamicUrls": [
+      {
+        "parameter": ["year"],
+        "url": "https://www.imdb.com/event/ev0000003/:year/1/?ref_=ev_eh"
+      }
+    ]
+  }
+}
