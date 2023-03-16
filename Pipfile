@@ -4,6 +4,15 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+fastapi = "*"
+python-decouple = "*"
+pydantic = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+fastapi-camelcase = "*"
+aerich = "*"
+tortoise-orm = {extras = ["aiomysql"], version = "*"}
+bs4 = "*"
+requests = "*"
 
 [dev-packages]
 
