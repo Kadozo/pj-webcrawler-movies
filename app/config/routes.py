@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from app.config.settings import getSettings
 
-from app.models.watchable.routes import router as routerWatchable
-from app.models.genre.routes import router as routerGenre
+from app.models.watchable import routes as watchable_routes
+from app.models.genre import routes as genre_routes
 
 settings = getSettings()
 
 def init_routes(app: FastAPI):
-    app.include_router(routerGenre)
-    app.include_router(routerWatchable)
+    app.include_router(genre_routes.router, prefix="/genre")
+    app.include_router(watchable_routes.router, prefix="/watchable")

@@ -11,4 +11,4 @@ Para executar o projeto:
 - Certifique-se que tenha um banco de dados criado com o nome informado no arquivo `.env`
 - Execute `aerich upgrade` para fazer as migrations para o bando de dados
 
-- Seu ambiente está configurado!
+- Seu ambiente está configurado! Execute `python run.py` para iniciar o servidor
