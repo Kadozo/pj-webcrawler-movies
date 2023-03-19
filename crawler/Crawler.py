@@ -14,16 +14,16 @@ class Crawler():
         self.limit = limit
         self.name_save_file = name_save_file
     
-    def run(self) -> None:
+    def run(self, file_name) -> None:
         print("Reading root urls...")
-        self.get_root_list("root.json")
+        self.get_root_list(file_name)
         print("Initializing data catch...")
         self.get_data()
         print("Saving data in json...")
         self.save_data()
 
-    def get_root_list(self, name_file) -> None:
-        with open(name_file, "r") as file:
+    def get_root_list(self, file_name) -> None:
+        with open(file_name, "r") as file:
             self.root_list = json.load(file)
     
     def format(self, value, type):

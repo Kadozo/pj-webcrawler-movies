@@ -1,12 +1,9 @@
 from tortoise import Model, fields
-from datetime import datetime
 
-class Measurement(Model):
+class Genre(Model):
     id = fields.IntField(pk=True, index=True)
-    name = fields.CharField(
-        max_length=50,
-    )
-    created_at = fields.DatetimeField(default=datetime.now())
+    name = fields.CharField(max_length=50, unique=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
         ordering=["id"]

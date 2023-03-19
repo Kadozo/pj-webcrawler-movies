@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     MODELS: list = [
         "app.models.genre.model",
         "app.models.watchable.model",
+        "app.models.watchableGenre.model",
         "aerich.models"
     ]
 
