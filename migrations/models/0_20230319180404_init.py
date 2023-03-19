@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS `watchable` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `title` VARCHAR(100) NOT NULL,
     `ranking` INT NOT NULL,
-    `year` INT,
+    `star_year` INT,
+    `end_year` INT,
     `age` VARCHAR(10),
     `runtime` VARCHAR(15),
     `imdb_rating` VARCHAR(5),
@@ -23,7 +24,11 @@ CREATE TABLE IF NOT EXISTS `watchable` (
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `watchablegenre` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `created_at` DATETIME(6) NOT NULL  DEFAULT CURRENT_TIMESTAMP(6)
+    `created_at` DATETIME(6) NOT NULL  DEFAULT CURRENT_TIMESTAMP(6),
+    `genre_id` INT NOT NULL,
+    `watchable_id` INT NOT NULL,
+    CONSTRAINT `fk_watchabl_genre_48c64ba0` FOREIGN KEY (`genre_id`) REFERENCES `genre` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_watchabl_watchabl_f7fde563` FOREIGN KEY (`watchable_id`) REFERENCES `watchable` (`id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `aerich` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,

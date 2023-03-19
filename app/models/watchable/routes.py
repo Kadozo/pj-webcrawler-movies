@@ -3,12 +3,12 @@ from app.models.watchable import schema
 from app.models.watchable.repository import WatchableRepository
 from starlette import status
 
-router = APIRouter()
+router = APIRouter(prefix="/watchable")
 
 @router.get(
-    "/{id}",
-    description="Router to get all measurements ordering",
+    "/",
+    description="description",
     status_code=status.HTTP_200_OK
 )
-async def get_measurement(req: Request, id: str):
-    return {"measurements": req.query_params, "id": id}
+async def get(req: Request):
+    return {"response": req.query_params}

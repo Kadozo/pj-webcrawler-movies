@@ -3,36 +3,35 @@ from random import randint
 import requests as req
 from bs4 import BeautifulSoup as bs
 from time import sleep
+from colorama import Fore
 
 class Crawler():
-    def __init__(self, offset, urlTypes = "imdbUrls", limit = 1, name_save_file = "movies.json") -> None:
-        self.root_list = {}
+    def __init__(self, offset, site = "imdb", limit = 1) -> None:
         self.offset = offset
-        self.movies = []
         self.headers = {'Accept-Language': 'en-US, en;q=0.5'}
-        self.urlTypes = urlTypes
+        self.site = site
         self.limit = limit
-        self.name_save_file = name_save_file
     
     def run(self, file_name) -> None:
-        print("Reading root urls...")
-        self.get_root_list(file_name)
-        print("Initializing data catch...")
-        self.get_data()
-        print("Saving data in json...")
-        self.save_data()
+        print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[reading file] - reading root file {file_name}")
+        root_list = self.get_root_list(file_name)
+        self.get_data(root_list)
 
-    def get_root_list(self, file_name) -> None:
+    def get_root_list(self, file_name: str) -> dict:
         with open(file_name, "r") as file:
-            self.root_list = json.load(file)
+            list = json.load(file)
+        return list
     
-    def format(self, value, type):
+    def format(self, value: str, type: str) -> str:
         if value != None:
             match type:
                 case "ranking":
                     return value.replace(".", "")
-                case "year":
-                    return value.replace("(", "").replace(")", "")
+                case "start_year":
+                    return value.replace("(", "").replace(")", "").split("–")[0]
+                case "end_year":
+                    value = value.replace("(", "").replace(")", "").replace(" ", "").split("–")
+                    return value[1] if len(value) > 1 else None
                 case "rating":
                     return value.replace("\n", "")
                 case "description":
@@ -46,7 +45,7 @@ class Crawler():
                     return genre
         return value
     
-    def check_null(self, div, isArray = False, pos = None):
+    def check_null(self, div, isArray: bool = False, pos: int = None):
         if div == None:
             return None
         if isArray:
@@ -54,12 +53,14 @@ class Crawler():
         else:
             return div.text
 
-    def get_data(self) -> None:
-        pagination = 1
-        for url in self.root_list[self.urlTypes]["urls"]:
+    def get_data(self, root_list: dict) -> None:
+        for url in root_list[self.site]["urls"]:
+            data = []
+            pagination = 1
+            print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[getting data] - getting data in website: " + Fore.YELLOW + url['url'])
             while pagination <= self.limit:
-                print(f"In pagination {pagination} to {pagination + self.offset}.")
-                page = req.get(url=url.replace(":start", str(pagination)),headers=self.headers).text
+                print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[start pagination] - in pagination {pagination} to {pagination + self.offset}.")
+                page = req.get(url=url["url"].replace(":start", str(pagination)),headers=self.headers).text
                 soup = bs(page, "html.parser")
                 divs = soup.find_all(class_="lister-item mode-advanced")
                 for div in divs:
@@ -83,10 +84,11 @@ class Crawler():
                     metascore = self.check_null(div.find(class_='inline-block ratings-metascore'))
                     description = self.check_null(div.find_all(class_='text-muted'), isArray=True, pos=2)
                     
-                    self.movies.append({
+                    data.append({
                         "title": title,
                         "ranking": self.format(ranking, type="ranking"),
-                        "year": self.format(year, type="year"),
+                        "start_year": self.format(year, type="start_year"),
+                        "end_year": self.format(year, type="end_year"),
                         "age": age,
                         "runtime": runtime,
                         "genre": self.format(genre, type="genre"),
@@ -94,9 +96,12 @@ class Crawler():
                         "metascore": self.format(metascore, type="metascore"),
                         "description":self.format(description, type="description")
                     })
+                print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[end pagination] - paging data {pagination} to {pagination + self.offset} catched")
                 sleep(randint(2,10))
                 pagination += self.offset
+            print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[saving data] - saving {url['type']} data...")
+            self.save_data(data, name_file=self.site + "_" + url["type"])
     
-    def save_data(self) -> None:
-        with open(self.name_save_file,"w") as file:
-            json.dump(self.movies,file,ensure_ascii=False,indent=2)
+    def save_data(self, data: list[dict], name_file: str) -> None:
+        with open("crawler/data/" + name_file + ".json","w") as file:
+            json.dump(data,file,ensure_ascii=False,indent=2)

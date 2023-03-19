@@ -1,8 +1,26 @@
 {
-  "imdbUrls": {
+  "imdb": {
     "urls": [
-      "https://www.imdb.com/search/title/?title_type=feature,tv_movie&start=:start&count=250",
-      "https://www.imdb.com/search/title/?title_type=tv_series&start=:start&count=250"
+      {
+        "url": "https://www.imdb.com/search/title/?title_type=feature,tv_movie&start=:start&count=250",
+        "type": "movies"
+      },
+      {
+        "url": "https://www.imdb.com/search/title/?title_type=tv_series&start=:start&count=250",
+        "type": "series"
+      }
+    ]
+  },
+  "tomattoes": {
+    "urls": [
+      {
+        "url": "",
+        "type": "movies"
+      },
+      {
+        "url": "",
+        "type": "series"
+      }
     ]
   }
 }

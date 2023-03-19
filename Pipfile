@@ -13,6 +13,7 @@ aerich = "*"
 tortoise-orm = {extras = ["aiomysql"], version = "*"}
 bs4 = "*"
 requests = "*"
+colorama = "*"
 
 [dev-packages]
 

@@ -4,7 +4,8 @@ class Watchable(Model):
     id = fields.IntField(pk=True, index=True)
     title = fields.CharField(max_length=100)
     ranking = fields.IntField()
-    year = fields.IntField(null=True)
+    star_year = fields.IntField(null=True)
+    end_year = fields.IntField(null=True)
     age = fields.CharField(max_length=10, null=True)
     runtime = fields.CharField(max_length=15, null=True)
     imdb_rating= fields.CharField(max_length=5, null=True)
@@ -14,4 +15,4 @@ class Watchable(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
-        ordering=["type", "year"]
+        ordering=["type", "start_year"]

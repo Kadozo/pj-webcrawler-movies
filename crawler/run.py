@@ -1,9 +1,8 @@
-from .Crawler import Crawler
+from Crawler import Crawler
 
 OFFSET = 250
-URL_TYPES = "imdbUrls"
+SITE = "imdb"
 LIMIT = 2500
-NAME_FILE = "movies.json"
-ROOT_FILE = "root.json"
+ROOT_FILE = "crawler/root.json"
 
-Crawler(offset=OFFSET, urlTypes=URL_TYPES, limit=LIMIT, name_save_file=NAME_FILE).run(ROOT_FILE)
+Crawler(offset=OFFSET, site=SITE, limit=LIMIT).run(ROOT_FILE)

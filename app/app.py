@@ -16,5 +16,5 @@ init_routes(app)
 init_middleware(app)
 
 """Initializing Database"""
-if((len(args) > 1) and (args[1] == "--initdb")):
+if((len(args) < 1) and (args[1] != "--init-db")):
     init_db(app)

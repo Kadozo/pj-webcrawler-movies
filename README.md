@@ -9,6 +9,6 @@ Para executar o projeto:
 - Execute `cp .env.example .env` no diretório raiz do projeto e edite as informações do arquivo `.env` criado (de acordo com suas configurações)
 - Execute `pipenv shell` no diretório raiz do projeto
 - Certifique-se que tenha um banco de dados criado com o nome informado no arquivo `.env`
-- Execute `aerich upgrade` para fazer as migrations para o bando de dados
 
-- Seu ambiente está configurado! Execute `python run.py` para iniciar o servidor
+- Seu ambiente está configurado! Execute `python run.py --init-db` para iniciar o servidor
+  - Esse comando já executará as migrations e migrará os schemas pro banco de dados 
