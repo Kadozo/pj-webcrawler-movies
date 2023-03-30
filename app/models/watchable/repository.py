@@ -43,9 +43,9 @@ class WatchableRepository:
             ConfigurationError -> Configuration error
             ValueError -> When a passed parameter is not type compatible.
     """
-    async def update(self, watchable: Watchable, data: dict) -> Watchable:
-        result = await watchable.update_from_dict(data)
-        return result
+    async def update(self, watchable: Watchable) -> Watchable:
+        await watchable.save()
+        return watchable
 
     """
         Get one watchable where it has the same id as given.

@@ -6,16 +6,23 @@ from time import sleep
 from colorama import Fore
 
 class Crawler():
-    def __init__(self, offset, site = "imdb", limit = 1) -> None:
+    def __init__(self, offset, site = "imdb", limit = 1, save_in_file = False) -> None:
         self.offset = offset
         self.headers = {'Accept-Language': 'en-US, en;q=0.5'}
         self.site = site
         self.limit = limit
+        self.save_in_file = save_in_file
     
     def run(self, file_name) -> None:
         print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[reading file] - reading root file {file_name}")
         root_list = self.get_root_list(file_name)
-        self.get_data(root_list)
+        data = []
+        for url in root_list[self.site]["urls"]:
+            array = self.get_data(url)
+            if self.save_in_file:
+                self.save_data(array, name_file=self.site + "_" + url["type"])
+            data.append(array)
+        return data
 
     def get_root_list(self, file_name: str) -> dict:
         with open(file_name, "r") as file:
@@ -53,17 +60,17 @@ class Crawler():
         else:
             return div.text
 
-    def get_data(self, root_list: dict) -> None:
-        for url in root_list[self.site]["urls"]:
-            data = []
-            pagination = 1
-            print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[getting data] - getting data in website: " + Fore.YELLOW + url['url'])
-            while pagination <= self.limit:
-                print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[start pagination] - in pagination {pagination} to {pagination + self.offset}.")
-                page = req.get(url=url["url"].replace(":start", str(pagination)),headers=self.headers).text
-                soup = bs(page, "html.parser")
-                divs = soup.find_all(class_="lister-item mode-advanced")
-                for div in divs:
+    def get_data(self, url: str) -> list[dict]:
+        data = []
+        pagination = 1
+        print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[getting data] - getting data in website: " + Fore.YELLOW + url['url'])
+        while pagination <= self.limit:
+            print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[start pagination] - in pagination {pagination} to {pagination + self.offset}.")
+            page = req.get(url=url["url"].replace(":start", str(pagination)),headers=self.headers).text
+            soup = bs(page, "html.parser")
+            divs = soup.find_all(class_="lister-item mode-advanced")
+            for div in divs:
+                try:
                     header = self.check_null(div.find(class_='lister-item-header'))
                     title = None
                     ranking = None
@@ -83,24 +90,33 @@ class Crawler():
                     rating = self.check_null(div.find(class_='inline-block ratings-imdb-rating'))
                     metascore = self.check_null(div.find(class_='inline-block ratings-metascore'))
                     description = self.check_null(div.find_all(class_='text-muted'), isArray=True, pos=2)
-                    
+
+                    rank_format = self.format(ranking, type="ranking")
+                    start_year = self.format(year, type="start_year")
+                    end_year = self.format(year, type="end_year")
+                    rating_format = self.format(rating, type="rating")
+                    metascore_format = self.format(metascore, type="metascore")
+
                     data.append({
                         "title": title,
-                        "ranking": self.format(ranking, type="ranking"),
-                        "start_year": self.format(year, type="start_year"),
-                        "end_year": self.format(year, type="end_year"),
+                        "ranking": int(rank_format) if rank_format else None,
+                        "start_year": int(start_year) if start_year else None,
+                        "end_year": int(end_year) if end_year else None,
                         "age": age,
                         "runtime": runtime,
                         "genre": self.format(genre, type="genre"),
-                        "rating": self.format(rating, type="rating"),
-                        "metascore": self.format(metascore, type="metascore"),
-                        "description":self.format(description, type="description")
+                        f"{self.site}_rating": float(rating_format) if rating_format else None,
+                        "metascore_rating": float(metascore_format) if metascore_format else None,
+                        "description": self.format(description, type="description"),
+                        "type": url["type"]
                     })
-                print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[end pagination] - paging data {pagination} to {pagination + self.offset} catched")
-                sleep(randint(2,10))
-                pagination += self.offset
-            print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[saving data] - saving {url['type']} data...")
-            self.save_data(data, name_file=self.site + "_" + url["type"])
+                except Exception as e:
+                    print("erro: ", e)
+            print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[end pagination] - paging data {pagination} to {pagination + self.offset} catched")
+            sleep(randint(2,10))
+            pagination += self.offset
+        print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[saving data] - saving {url['type']} data...")
+        return data
     
     def save_data(self, data: list[dict], name_file: str) -> None:
         with open("crawler/data/" + name_file + ".json","w") as file:

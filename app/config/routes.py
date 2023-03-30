@@ -4,16 +4,20 @@ from starlette import status
 
 from app.models.watchable import routes as watchable_routes
 from app.models.genre import routes as genre_routes
+from crawler.Crawler import Crawler
+from .service import ServiceManager
+
 
 router = APIRouter(prefix="/crawler")
 
 @router.get(
-    "/exec",
-    description="description",
+    "/run",
+    description="to execute the crawler script",
     status_code=status.HTTP_200_OK
 )
 async def get(req: Request):
-    return {"response": req.query_params}
+    response = await ServiceManager(req).run()
+    return {"response": response == 0, "quantity": response}
 
 settings = getSettings()
 
