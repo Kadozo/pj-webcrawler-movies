@@ -1,23 +1,23 @@
-from fastapi import FastAPI, APIRouter, Request
+from fastapi import FastAPI, APIRouter, Request, HTTPException
 from app.config.settings import getSettings
 from starlette import status
+from app.config import schema
 
 from app.models.watchable import routes as watchable_routes
 from app.models.genre import routes as genre_routes
-from crawler.Crawler import Crawler
-from .service import ServiceManager
+from .services import ServiceManager
 
 
 router = APIRouter(prefix="/crawler")
 
-@router.get(
+@router.post(
     "/run",
     description="to execute the crawler script",
     status_code=status.HTTP_200_OK
 )
-async def get(req: Request):
-    response = await ServiceManager(req).run()
-    return {"response": response == 0, "quantity": response}
+async def get(req: Request, params: schema.RunCrawler):
+    await ServiceManager(req, params=params).run()
+    return {"message": "crawler run successfully"}
 
 settings = getSettings()
 

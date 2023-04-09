@@ -44,8 +44,8 @@ class GenreRepository:
             ValueError -> When a passed parameter is not type compatible.
     """
     async def update(self, genre: Genre, data: dict) -> Genre:
-        result = await genre.update_from_dict(data)
-        return result
+        await genre.save()
+        return genre
 
     """
         Get one genre where it has the same id as given.

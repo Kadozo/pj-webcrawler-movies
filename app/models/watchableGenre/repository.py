@@ -44,8 +44,8 @@ class WatchableGenreRepository:
             ValueError -> When a passed parameter is not type compatible.
     """
     async def update(self, watchableGenre: WatchableGenre, data: dict) -> WatchableGenre:
-        result = await watchableGenre.update_from_dict(data)
-        return result
+        await watchableGenre.save(data)
+        return watchableGenre
 
     """
         Get one watchableGenre where it has the same id as given.

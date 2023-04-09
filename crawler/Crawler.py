@@ -32,6 +32,10 @@ class Crawler():
     def format(self, value: str, type: str) -> str:
         if value != None:
             match type:
+                case "title":
+                    return value.replace("'", "`")
+                case "img_url":
+                    return value.split("._V1")[0]
                 case "ranking":
                     return value.replace(".", "")
                 case "start_year":
@@ -63,12 +67,14 @@ class Crawler():
     def get_data(self, url: str) -> list[dict]:
         data = []
         pagination = 1
+        url["url"] = url["url"].replace(":count", str(self.offset))
         print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[getting data] - getting data in website: " + Fore.YELLOW + url['url'])
         while pagination <= self.limit:
-            print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[start pagination] - in pagination {pagination} to {pagination + self.offset}.")
+            print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[start pagination] - in pagination {pagination} to {pagination + self.offset - 1}.")
             page = req.get(url=url["url"].replace(":start", str(pagination)),headers=self.headers).text
             soup = bs(page, "html.parser")
             divs = soup.find_all(class_="lister-item mode-advanced")
+            errors = []
             for div in divs:
                 try:
                     header = self.check_null(div.find(class_='lister-item-header'))
@@ -91,31 +97,43 @@ class Crawler():
                     metascore = self.check_null(div.find(class_='inline-block ratings-metascore'))
                     description = self.check_null(div.find_all(class_='text-muted'), isArray=True, pos=2)
 
-                    rank_format = self.format(ranking, type="ranking")
-                    start_year = self.format(year, type="start_year")
-                    end_year = self.format(year, type="end_year")
                     rating_format = self.format(rating, type="rating")
                     metascore_format = self.format(metascore, type="metascore")
 
+                    img = div.find('img')
+                    id = ""
+                    url_img = ""
+                    if img:
+                        id = img.get('data-tconst')
+                        url_img = img.get('loadlate')
+                    else:
+                        raise Exception("watchable id not found")
+
+                    votes = div.find(class_="sort-num_votes-visible").find_all('span')[1].get('data-value')
+                        
                     data.append({
-                        "title": title,
-                        "ranking": int(rank_format) if rank_format else None,
-                        "start_year": int(start_year) if start_year else None,
-                        "end_year": int(end_year) if end_year else None,
+                        "id": id,
+                        "img": self.format(url_img, type="img_url"),
+                        "title": self.format(title, type="title"),
+                        "ranking": self.format(ranking, type="ranking"),
+                        "start_year": self.format(year, type="start_year"),
+                        "end_year": self.format(year, type="end_year"),
                         "age": age,
                         "runtime": runtime,
                         "genre": self.format(genre, type="genre"),
                         f"{self.site}_rating": float(rating_format) if rating_format else None,
                         "metascore_rating": float(metascore_format) if metascore_format else None,
                         "description": self.format(description, type="description"),
+                        "votes": votes,
                         "type": url["type"]
                     })
                 except Exception as e:
-                    print("erro: ", e)
+                    errors.append(e)
+            if len(errors) > 0:
+                raise Exception(errors)
             print(Fore.GREEN + "INFO:       " + Fore.WHITE + f"[end pagination] - paging data {pagination} to {pagination + self.offset} catched")
             sleep(randint(2,10))
             pagination += self.offset
-        print(Fore.GREEN + "INFO:   " + Fore.WHITE + f"[saving data] - saving {url['type']} data...")
         return data
     
     def save_data(self, data: list[dict], name_file: str) -> None:

@@ -55,7 +55,7 @@ class WatchableRepository:
         return:
             Object Watchable found or None if not found
     """
-    async def get_one(self, id: int) -> Watchable:
+    async def get_one(self, id: str) -> Watchable:
         result = await self._entity.get_or_none(id=id)
         return result
     

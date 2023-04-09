@@ -1,52 +1,115 @@
 from app.models.watchableGenre.model import WatchableGenre
 from app.models.watchableGenre.repository import WatchableGenreRepository
+from app.models.watchable.repository import WatchableRepository
+from app.models.genre.repository import GenreRepository
 
-from fastapi import Request
+from tortoise.exceptions import IntegrityError, OperationalError, DoesNotExist
+from fastapi import Request, HTTPException
 
 
-class WatchableGenreService():
+class CreateService():
     def __init__(self, req: Request):
         self.__req = req
         self.__repository = WatchableGenreRepository()
+        self.__watchable_repository = WatchableRepository()
+        self.__genre_repository = GenreRepository()
     
-    async def create(self, watchableGenre: dict) -> WatchableGenre:
-        try:
-            return await self.__repository.create(watchableGenre)
-        except Exception as e:
-            raise e
-        
-    async def get_by_watchable_id(self, watchableId: int) -> WatchableGenre:
-        try:
-            watchableGenre = await self.__repository.execute_sql(f"select * from watchablegenre where watchable_id='{watchableId}'")
-            if len(watchableGenre) > 0:
-                return watchableGenre[0]
-            else:
-                return None
-        except Exception as e:
-            raise e
+    async def __exists_watchable(self, watchable_id: str)-> bool:
+        result = await self.__watchable_repository.get_one(watchable_id)
+        return result is not None
+
+    async def __exists_genre(self, genre_id: int) -> bool:
+        result = await self.__genre_repository.get_one(genre_id)
+        return result is not None
     
-    async def get_by_genre_id(self, genreId: int) -> WatchableGenre:
+    def __validate_types(self, genre_id: int, watchable_id: str) -> bool:
+        if genre_id is not None and watchable_id is not None:
+            return True
+        raise HTTPException(status_code=422, detail="Parameters passeds not valid. ")
+
+    async def __validate(self, genre_id: int, watchable_id: str) -> bool:
+        self.__validate_types(genre_id, watchable_id)
+        if await self.__exists_genre(genre_id):
+            if await self.__exists_watchable(watchable_id):
+                return True
+            raise HTTPException(status_code=404, detail="Watchable not found.")
+        raise HTTPException(status_code=404, detail="Genre not found.")
+
+    async def create(self, model: dict) -> WatchableGenre:
+        await self.__validate(model['genre_id'], model['watchable_id'])
+
         try:
-            watchableGenre = await self.__repository.execute_sql(f"select * from watchablegenre where genre_id='{genreId}'")
-            if len(watchableGenre) > 0:
-                return watchableGenre[0]
-            else:
-                return None
+            return await self.__repository.create(model)
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database integrity affected.")
         except Exception as e:
-            raise e
+            raise HTTPException(status_code=500, detail="An error was ocurred while creating the watchable.")
+            
+class GetByLinkService():
+    def __init__(self, req: Request):
+        self.__req = req
+        self.__repository = WatchableGenreRepository()
+
+    def __validate_types(self, genre_id: int, watchable_id: str) -> bool:
+        if genre_id is not None and watchable_id is not None:
+            return True
+        raise HTTPException(status_code=422, detail="Parameters passeds not valid. ")
+    def __validate(self, genre_id: int, watchable_id: str) -> bool:
+        return self.__validate_types(genre_id, watchable_id)
     
-    async def get_by_id(self, id: int) -> WatchableGenre:
-        try:
-            watchable = await self.__repository.get_one(id)
-            return watchable
-        except Exception as e:
-            raise e
+    async def get(self, genre_id: int, watchable_id: str) -> WatchableGenre:
+        if self.__validate(genre_id, watchable_id):
+            try:
+                result = await self.__repository.execute_sql(f"select * from watchablegenre where watchable_id='{watchable_id}' and genre_id={genre_id}")
+                if len(result) > 0:
+                    return result[0]
+                else:
+                    return None
+            except OperationalError as e:
+                raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Unknow error ocurred.")
+
+class GetByIdService():
+    def __init__(self, req: Request):
+        self.__req = req
+        self.__repository = WatchableGenreRepository()
+
+    def __validate_types(self, id: int) -> bool:
+        if id is not None:
+            return True
+        raise HTTPException(status_code=422, detail="Parameters passeds not valid. ")
+    
+    def __validate(self, id: int) -> bool:
+        return self.__validate_types(id)
+    
+    async def get(self, id: int) -> WatchableGenre:
+        if self.__validate(id):
+            try:
+                return await self.__repository.get_one(id)
+            except DoesNotExist as e:
+                raise HTTPException(status_code=404, detail="WatchableGenre does not exist.")
+            except OperationalError as e:
+                raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Unknow error ocurred.")
+
+class UpdateService():
+    def __init__(self, req: Request):
+        self.__req = req
+        self.__repository = WatchableGenreRepository()
+        self.__get_service = GetByIdService(req)
+
+    async def __validate(self, id: int) -> WatchableGenre:
+        return await self.__get_service.get(id)
 
     async def update(self, id: int, data: dict) -> WatchableGenre:
+        model = await self.__validate(id)
         try:
-            watchableGenre = await self.get_by_id(id)
-            #Faz o update
-            result = await self.__repository.update(watchableGenre)
-            return result
+            model.genre = data.get('genre_id')
+            model.watchable = data.get('watchable_id')
+            return await self.__repository.update(model)
+        except IntegrityError as e:
+            raise HTTPException(status_code=409, detail="Database integrity affected.")
         except Exception as e:
-            raise e
+            raise HTTPException(status_code=500, detail="Unknown error ocurred")
