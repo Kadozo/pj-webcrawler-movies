@@ -6,7 +6,7 @@
         "type": "movies"
       },
       {
-        "url": "https://www.imdb.com/search/title/?title_type=tv_series&start=:start&count=:count&sort=movemeter,asc&num_votes=10000,",
+        "url": "https://www.imdb.com/search/title/?title_type=tv_series&start=:start&count=:count&sort=movemeter,asc&num_votes=5000,",
         "type": "series"
       }
     ]

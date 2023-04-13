@@ -2,6 +2,7 @@ from fastapi import Request, HTTPException
 from app.models.watchable.model import Watchable
 from app.models.watchable.repository import WatchableRepository
 from tortoise.exceptions import IntegrityError, OperationalError, DoesNotExist
+from tortoise import Tortoise
 
 class CreateService():
     def __init__(self, req: Request):
@@ -67,14 +68,11 @@ class GetByTitleService():
     def __validate(self, title: str) -> bool:
         return self.__validate_types(title)
 
-    async def get(self, title: str) -> Watchable:
+    async def get(self, title: str, type: str = None) -> Watchable:
         if self.__validate(title):
             try:
-                result =  await self.__repository.execute_sql(f"select * from watchable where title='{title}'")
-                if len(result) > 0:
-                    return result[0]
-                else:
-                    return None
+                query = f" and type='{type}'" if type else ""
+                return await self.__repository.execute_sql(f"select * from watchable where title='{title}'" + query )
             except OperationalError as e:
                 raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
             except Exception as e:
@@ -121,3 +119,52 @@ class UpdateService():
         except Exception as e:
             raise HTTPException(status_code=500, detail="Unknown error ocurred")
 
+class GetAllService():
+    def __init__(self, req: Request):
+        self.__req = req
+        self.__repository = WatchableRepository()
+    
+    def __validate_types(self, type: str) -> bool:
+        if type is not None:
+            return True
+        raise HTTPException(status_code=422, detail="Parameters passeds not valid. ")
+    
+    def __validate(self, type: str) -> bool:
+        return self.__validate_types(type)
+
+    async def get(self, type: str) -> Watchable:
+        if self.__validate(type):
+            try:
+                return await self.__repository.execute_sql(f"select * from watchable where type='{type}'")
+            except OperationalError as e:
+                raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Unknow error ocurred.")
+
+class GetByGenreService():
+    def __init__(self, req: Request):
+        self.__req = req
+        self.__repository = Tortoise.get_connection('default')
+    
+    async def get(self, type: str = None, name: str = None) -> list[Watchable]:
+        try:
+            textType = f"where w.type='{type}'" if type else ""
+            textName = ""
+            if type:
+                textName = " and "
+            else:
+                textName = " where "
+            textName = textName + f"g.name like '%{name}%'" if name else ""
+
+            query = f"""select 
+                w.id, w.title, w.img, w.votes, w.ranking, w.last_ranking, w.start_year, w.end_year, w.age, w.runtime,
+                w.imdb_rating, w.metascore_rating, w.tomatoes_rating, w.updated_at as last_atualization, g.name as genre
+                from watchable w join watchablegenre w2 on w.id=w2.watchable_id join genre g on g.id=w2.genre_id
+                {textType} {textName}
+                order by ranking asc"""
+            return await self.__repository.execute_query_dict(query)
+        except OperationalError as e:
+            print(e)
+            raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail="Unknown error ocurred")
