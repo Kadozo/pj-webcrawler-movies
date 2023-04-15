@@ -8,10 +8,18 @@ from app.models.genre import routes as genre_routes
 from .services import ServiceManager
 
 
-router = APIRouter(prefix="/crawler")
+router = APIRouter()
+
+@router.get(
+    "/",
+    description="Endpoint to welcome",
+    status_code=status.HTTP_200_OK
+)
+def welcome():
+    return {"message": "Welcome to Movies and Series Analysis API. To view the documentation for more information, visit '/docs' url."}
 
 @router.post(
-    "/run",
+    "/crawler",
     description="to execute the crawler script",
     status_code=status.HTTP_200_OK
 )
