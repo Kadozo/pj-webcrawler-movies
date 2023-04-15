@@ -18,7 +18,6 @@ class ServiceManager():
         self.__watchable_update = WatchableServices.UpdateService(req)
         self.__watchable_get_by_id = WatchableServices.GetByIdService(req)
         self.__genre_create = GenreServices.CreateService(req)
-        self.__genre_get_by_name = GenreServices.GetByNameService(req)
         self.__watchable_genre_create = watchableGenreServices.CreateService(req)
         self.__watchable_genre_get_link = watchableGenreServices.GetByLinkService(req)
     
@@ -45,7 +44,8 @@ class ServiceManager():
         else:
             watchable = await self.__watchable_create.create(element)
         for genre_name in element["genre"]:
-            genre = await self.__genre_get_by_name.get(genre_name)
+            genre = await GenreServices.GetService(name=genre_name).run()
+            genre = genre[0] if len(genre)>0 else None
             if genre is not None:
                 link = await self.__watchable_genre_get_link.get(genre.id, watchable.id)
                 if link is None:

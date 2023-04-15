@@ -55,29 +55,6 @@ class GetByIdService():
                 raise HTTPException(status_code=500, detail="Unknow error ocurred.")
 
 
-class GetByTitleService():
-    def __init__(self, req: Request):
-        self.__req = req
-        self.__repository = WatchableRepository()
-    
-    def __validate_types(self, title: str) -> bool:
-        if title is not None:
-            return True
-        raise HTTPException(status_code=422, detail="Parameters passeds not valid. ")
-    
-    def __validate(self, title: str) -> bool:
-        return self.__validate_types(title)
-
-    async def get(self, title: str, type: str = None) -> Watchable:
-        if self.__validate(title):
-            try:
-                query = f" and type='{type}'" if type else ""
-                return await self.__repository.execute_sql(f"select * from watchable where title='{title}'" + query )
-            except OperationalError as e:
-                raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
-            except Exception as e:
-                raise HTTPException(status_code=500, detail="Unknow error ocurred.")
-
 class UpdateService():
     def __init__(self, req: Request):
         self.__req = req
@@ -119,52 +96,67 @@ class UpdateService():
         except Exception as e:
             raise HTTPException(status_code=500, detail="Unknown error ocurred")
 
-class GetAllService():
-    def __init__(self, req: Request):
-        self.__req = req
-        self.__repository = WatchableRepository()
-    
-    def __validate_types(self, type: str) -> bool:
-        if type is not None:
-            return True
-        raise HTTPException(status_code=422, detail="Parameters passeds not valid. ")
-    
-    def __validate(self, type: str) -> bool:
-        return self.__validate_types(type)
-
-    async def get(self, type: str) -> Watchable:
-        if self.__validate(type):
-            try:
-                return await self.__repository.execute_sql(f"select * from watchable where type='{type}'")
-            except OperationalError as e:
-                raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
-            except Exception as e:
-                raise HTTPException(status_code=500, detail="Unknow error ocurred.")
-
-class GetByGenreService():
-    def __init__(self, req: Request):
-        self.__req = req
+class GetService():
+    def __init__(self, type: str, id: str, title: str, genre: list[str] = []):
+        self.__type = type.lower() if type else None
+        self.__title = title.lower() if title else None
+        self.__id = id.lower() if id else None
+        self.__genre = genre
         self.__repository = Tortoise.get_connection('default')
     
-    async def get(self, type: str = None, name: str = None) -> list[Watchable]:
-        try:
-            textType = f"where w.type='{type}'" if type else ""
-            textName = ""
-            if type:
-                textName = " and "
-            else:
-                textName = " where "
-            textName = textName + f"g.name like '%{name}%'" if name else ""
+    def __validate_param(self, param: str | list[str], _type: str) -> None:
+        if param is not None:
+            if type(param) != str:
+                if type(param) != list:
+                    raise HTTPException(status_code=422, detail=f"Parameter {_type} not valid. ")
+            elif len(param) > 100:
+                raise HTTPException(status_code=422, detail=f"Parameter {_type} not valid. ")
+    
+    def __validate(self) -> None:
+        self.__validate_param(self.__title, _type="title")
+        self.__validate_param(self.__type, _type="type")
+        self.__validate_param(self.__id, _type="id")
+        self.__validate_param(self.__genre, _type="genre")
 
-            query = f"""select 
-                w.id, w.title, w.img, w.votes, w.ranking, w.last_ranking, w.start_year, w.end_year, w.age, w.runtime,
-                w.imdb_rating, w.metascore_rating, w.tomatoes_rating, w.updated_at as last_atualization, g.name as genre
-                from watchable w join watchablegenre w2 on w.id=w2.watchable_id join genre g on g.id=w2.genre_id
-                {textType} {textName}
-                order by ranking asc"""
-            return await self.__repository.execute_query_dict(query)
+    def __make_text_where(self) -> str:
+        where = ""
+        if self.__id is not None:
+            return f" WHERE w.id = '{self.__id}'"
+        if self.__title is not None:
+                where += f" WHERE LOWER(w.title) LIKE '%{self.__title}%'"
+        if self.__type is not None:
+            if where == "":
+                where += f" WHERE w.type = '{self.__type}'"
+            else:
+                where += f" AND w.type = '{self.__type}'"
+        return where
+
+    def __make_text_having(self) -> str:
+        having = ""
+        if self.__genre is not None and len(self.__genre) > 0:
+            having = "HAVING"
+            for name in self.__genre:
+                having += f" CONCAT(',', LOWER(genres), ',') LIKE '%,{name.lower()},%' AND"
+            having = having.rstrip("AND")
+        return having
+
+    async def run(self) -> Watchable:
+        self.__validate()
+        try:
+            textWhere = self.__make_text_where()
+            textHaving = self.__make_text_having()
+            query = f"""
+                SELECT w.*, GROUP_CONCAT(g.name SEPARATOR ',') AS genres
+                FROM watchable w JOIN watchablegenre wg ON w.id = wg.watchable_id
+                JOIN genre g ON g.id = wg.genre_id {textWhere}
+                GROUP BY w.id {textHaving}
+                ORDER BY CAST(REPLACE(ranking, ',', "") AS UNSIGNED) ASC
+            """
+            result = await self.__repository.execute_query_dict(query)
+            for watchable in result:
+                watchable['genres'] = watchable['genres'].split(',')
+            return result
         except OperationalError as e:
-            print(e)
-            raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
+            raise HTTPException(status_code=500, detail=f"error ocurred in query SQL: {str(e)}")
         except Exception as e:
-            raise HTTPException(status_code=500, detail="Unknown error ocurred")
+            raise HTTPException(status_code=500, detail=f"Unknow error ocurred: {str(e)}")
