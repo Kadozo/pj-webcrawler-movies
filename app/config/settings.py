@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     DB_URL = config("DB_URL")
     ORIGINS: list = [
         "http://localhost:3000",
-        "https://localhost:3000"
+        "https://localhost:3000",
+        "http://0.0.0.0:5173",
+        "https://0.0.0.0:5173",
     ]
     GENERATE_SCHEMAS: bool = config("GENERATE_SCHEMAS", default=False)
     MODELS: list = [
