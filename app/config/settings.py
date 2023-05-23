@@ -10,12 +10,7 @@ class Settings(BaseSettings):
     APP_NAME: str = config("APP_NAME", default="API")
     APP_PORT: int = config("APP_PORT", default=3333, cast=int)
     DB_URL = config("DB_URL")
-    ORIGINS: list = [
-        "http://localhost:3000",
-        "https://localhost:3000",
-        "http://0.0.0.0:5173",
-        "https://0.0.0.0:5173",
-    ]
+    ORIGINS: list = ["*"]
     GENERATE_SCHEMAS: bool = config("GENERATE_SCHEMAS", default=False)
     MODELS: list = [
         "app.models.genre.model",
