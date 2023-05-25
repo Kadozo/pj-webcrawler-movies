@@ -26,9 +26,9 @@ class CreateService():
         try:
             return await self.__repository.create(model)
         except IntegrityError as e:
-            raise HTTPException(status_code=409, detail="Database integrity affected.")
+            raise HTTPException(status_code=409, detail=f"Database integrity affected. {str(e)}")
         except Exception as e:
-            raise HTTPException(status_code=500, detail="An error was ocurred while creating the watchable.")
+            raise HTTPException(status_code=500, detail=f"An error was ocurred while creating the watchable. {str(e)}")
 
 class GetByIdService():
     def __init__(self, req: Request):
@@ -48,11 +48,11 @@ class GetByIdService():
             try:
                 return await self.__repository.get_one(id)
             except DoesNotExist as e:
-                raise HTTPException(status_code=404, detail="Watchable does not exist.")
+                raise HTTPException(status_code=404, detail=f"Watchable does not exist. {str(e)}")
             except OperationalError as e:
-                raise HTTPException(status_code=500, detail="error ocurred in query SQL.")
+                raise HTTPException(status_code=500, detail=f"error ocurred in query SQL. {str(e)}")
             except Exception as e:
-                raise HTTPException(status_code=500, detail="Unknow error ocurred.")
+                raise HTTPException(status_code=500, detail=f"Unknow error ocurred. {str(e)}")
 
 
 class UpdateService():
@@ -92,16 +92,19 @@ class UpdateService():
 
             return await self.__repository.update(model)
         except IntegrityError as e:
-            raise HTTPException(status_code=409, detail="Database integrity affected.")
+            raise HTTPException(status_code=409, detail=f"Database integrity affected. {str(e)}")
         except Exception as e:
-            raise HTTPException(status_code=500, detail="Unknown error ocurred")
+            raise HTTPException(status_code=500, detail=f"Unknown error ocurred. {str(e)}")
 
 class GetService():
-    def __init__(self, type: str, id: str, title: str, genre: list[str] = []):
+    def __init__(self, type: str, id: str, title: str, genre: list[str], limit: int, offset: int, only_img: bool):
         self.__type = type.lower() if type else None
         self.__title = title.lower() if title else None
         self.__id = id.lower() if id else None
         self.__genre = genre
+        self.__limit = limit
+        self.__offset = offset
+        self.__only_img = only_img
         self.__repository = Tortoise.get_connection('default')
     
     def __validate_param(self, param: str | list[str], _type: str) -> None:
@@ -139,22 +142,48 @@ class GetService():
                 having += f" CONCAT(',', LOWER(genres), ',') LIKE '%,{name.lower()},%' AND"
             having = having.rstrip("AND")
         return having
+    
+    def __make_text_offset(self) -> str:
+        offset = ""
+        if self.__offset is not None:
+            offset = f"OFFSET {self.__offset}"
+        return offset
+    
+    def __make_text_limit(self) -> str:
+        limit = ""
+        if self.__limit is not None:
+            limit = f"LIMIT {self.__limit}"
+        return limit
+    
+    def __make_text_select(self) -> str:
+        select = ""
+        if self.__only_img:
+            select = "w.img"
+        else:
+            select = "w.*, GROUP_CONCAT(g.name SEPARATOR ',') AS genres"
+        return select
 
     async def run(self) -> Watchable:
         self.__validate()
         try:
             textWhere = self.__make_text_where()
             textHaving = self.__make_text_having()
+            textLimit = self.__make_text_limit()
+            textOffset = self.__make_text_offset()
+            textSelect = self.__make_text_select()
             query = f"""
-                SELECT w.*, GROUP_CONCAT(g.name SEPARATOR ',') AS genres
+                SELECT {textSelect}
                 FROM watchable w JOIN watchablegenre wg ON w.id = wg.watchable_id
                 JOIN genre g ON g.id = wg.genre_id {textWhere}
                 GROUP BY w.id {textHaving}
                 ORDER BY CAST(REPLACE(ranking, ',', "") AS UNSIGNED) ASC
+                {textLimit}
+                {textOffset}
             """
             result = await self.__repository.execute_query_dict(query)
-            for watchable in result:
-                watchable['genres'] = watchable['genres'].split(',')
+            if not self.__only_img:
+                for watchable in result:
+                    watchable['genres'] = watchable['genres'].split(',')
             return result
         except OperationalError as e:
             raise HTTPException(status_code=500, detail=f"error ocurred in query SQL: {str(e)}")

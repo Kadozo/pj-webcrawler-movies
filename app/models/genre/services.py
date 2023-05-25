@@ -81,7 +81,7 @@ class GetAvgService():
             raise HTTPException(status_code=500, detail=f"Unknown error ocurred: {str(e)}")
 
 class GetService():
-    def __init__(self, name: str, id: int):
+    def __init__(self, name: str = None, id: int = None):
         self.__id = id
         self.__name = name.lower() if name else None
         self.__repository = Tortoise.get_connection('default')
@@ -92,7 +92,7 @@ class GetService():
         where += concat + f"LOWER(name) LIKE '%{self.__name}%'" if self.__name else ""
         return where
         
-    async def run(self) -> list[Genre] | Genre:
+    async def run(self) -> list[dict] | dict:
         try:
             where = self.__make_where()
             result = await self.__repository.execute_query_dict(f"SELECT id, name FROM genre {where} ORDER BY name")

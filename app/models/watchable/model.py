@@ -17,6 +17,7 @@ class Watchable(Model):
     type = fields.CharField(max_length=30)
     updated_at = fields.DatetimeField(auto_now=True)
     created_at = fields.DatetimeField(auto_now_add=True)
+    description = fields.CharField(max_length=1000)
 
     class Meta:
         ordering=["type", "ranking"]

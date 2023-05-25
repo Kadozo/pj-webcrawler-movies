@@ -47,9 +47,9 @@ class ServiceManager():
             genre = await GenreServices.GetService(name=genre_name).run()
             genre = genre[0] if len(genre)>0 else None
             if genre is not None:
-                link = await self.__watchable_genre_get_link.get(genre.id, watchable.id)
+                link = await self.__watchable_genre_get_link.get(genre['id'], watchable.id)
                 if link is None:
-                    await self.__watchable_genre_create.create({"watchable_id":watchable.id, "genre_id":genre.id})
+                    await self.__watchable_genre_create.create({"watchable_id":watchable.id, "genre_id":genre['id']})
             else:
                 createdGenre = await self.__genre_create.create({"name":genre_name})
                 await self.__watchable_genre_create.create({"watchable_id":watchable.id, "genre_id":createdGenre.id})
